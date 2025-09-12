@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exportador de Afiliados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.24/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="/lib/signalr/signalr.min.js"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin 2s linear infinite;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-base-200 min-h-screen">
+    <!-- Header -->
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="container mx-auto">
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold text-primary">
+                    <svg class="inline-block w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Exportador de Afiliados
+                </h1>
+            </div>
+            <div class="flex-none">
+                <button class="btn btn-ghost btn-circle" onclick="toggleTheme()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Form Card -->
+            <div class="card bg-base-100 shadow-xl mb-8">
+                <div class="card-body">
+                    <h2 class="card-title text-xl mb-4">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Generar Exportación
+                    </h2>
+                    
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">Base de Datos</span>
+                            <span class="label-text-alt text-info">Seleccione la base de datos</span>
+                        </label>
+                        <select id="databaseSelect" class="select select-bordered w-full" disabled>
+                            <option value="">Cargando...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control w-full mt-4">
+                        <label class="label">
+                            <span class="label-text">Nombre del Afiliado Raíz</span>
+                            <span class="label-text-alt text-info">Ingrese el código del afiliado padre</span>
+                        </label>
+                        <input type="text" id="affiliateInput" placeholder="Ej: Turbo500" class="input input-bordered w-full" />
+                    </div>
+
+                    <div class="card-actions justify-end mt-6">
+                        <button id="exportBtn" class="btn btn-primary" onclick="startExport()">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Iniciar Exportación
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Card (Hidden by default) -->
+            <div id="progressCard" class="card bg-base-100 shadow-xl hidden">
+                <div class="card-body">
+                    <h2 class="card-title text-xl mb-4">
+                        <span id="progressIcon" class="loading loading-spinner text-primary"></span>
+                        <span id="progressTitle">Procesando...</span>
+                    </h2>
+                    
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-base-300 rounded-full h-4 mb-4">
+                        <div id="progressBar" class="progress-bar bg-primary h-4 rounded-full" style="width: 0%"></div>
+                    </div>
+                    
+                    <!-- Progress Details -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="font-semibold">Estado:</span>
+                            <span id="statusText" class="text-info">Iniciando...</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="font-semibold">Mensaje:</span>
+                            <span id="messageText">Preparando conexión...</span>
+                        </div>
+                        <div id="rowsInfo" class="flex justify-between text-sm hidden">
+                            <span class="font-semibold">Registros:</span>
+                            <span id="rowsText">0 / 0</span>
+                        </div>
+                        <div id="timeInfo" class="flex justify-between text-sm hidden">
+                            <span class="font-semibold">Tiempo:</span>
+                            <span id="timeText">0s</span>
+                        </div>
+                    </div>
+
+                    <!-- Download Button (Hidden until complete) -->
+                    <div id="downloadSection" class="card-actions justify-center mt-6 hidden">
+                        <div class="stats shadow">
+                            <div class="stat">
+                                <div class="stat-title">Archivo Generado</div>
+                                <div id="fileNameText" class="stat-value text-lg text-primary"></div>
+                                <div id="fileSizeText" class="stat-desc"></div>
+                            </div>
+                        </div>
+                        <button id="downloadBtn" class="btn btn-success btn-block mt-4" onclick="downloadFile()">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Descargar Excel
+                        </button>
+                        <button class="btn btn-outline btn-block mt-2" onclick="resetForm()">
+                            Nueva Exportación
+                        </button>
+                    </div>
+
+                    <!-- Error Message (Hidden by default) -->
+                    <div id="errorSection" class="alert alert-error mt-4 hidden">
+                        <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span id="errorText">Error en el proceso</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card bg-base-100 shadow-xl mt-8">
+                <div class="card-body">
+                    <h2 class="card-title text-lg">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Información
+                    </h2>
+                    <ul class="list-disc list-inside space-y-1 text-sm opacity-75">
+                        <li>El proceso puede tomar varios minutos dependiendo de la cantidad de datos</li>
+                        <li>Los archivos generados se eliminan automáticamente después de 1 hora</li>
+                        <li>El sistema procesa datos jerárquicos de jugadores con email verificado</li>
+                        <li>El archivo Excel incluye formato automático y filtros</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast toast-end"></div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
