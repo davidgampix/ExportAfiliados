@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "eA9DUQJCHbayikA2I84caNTDFDS1EiA9JX5ZJ9r2PA8=",
+  "Hash": "Safr6EMrNAOmc4ZoXtY7bnP0oGepBucY1NA/Fred00U=",
   "Source": "AfiliadosExportWeb",
   "BasePath": "_content/AfiliadosExportWeb",
   "Mode": "Default",
@@ -91,6 +91,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\lib\\signalr\\signalr.min.js"
+    },
+    {
+      "Identity": "C:\\David\\Proyectos\\ExportAfiliados\\AfiliadosExportWeb\\wwwroot\\login.html",
+      "SourceId": "AfiliadosExportWeb",
+      "SourceType": "Discovered",
+      "ContentRoot": "C:\\David\\Proyectos\\ExportAfiliados\\AfiliadosExportWeb\\wwwroot\\",
+      "BasePath": "_content/AfiliadosExportWeb",
+      "RelativePath": "login.html",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\login.html"
     }
   ]
 }

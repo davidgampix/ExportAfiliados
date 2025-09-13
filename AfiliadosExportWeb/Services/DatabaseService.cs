@@ -10,6 +10,7 @@ public interface IDatabaseService
     Task<IEnumerable<dynamic>> GetHierarchicalPlayersAsync(string rootAffiliate, string? databaseId, IProgress<ExportProgress> progress, CancellationToken cancellationToken);
     DatabaseConfig GetDatabase(string? databaseId);
     List<DatabaseConfig> GetAvailableDatabases();
+    Task<IEnumerable<AffiliateUser>> SearchAffiliatesAsync(string searchTerm, string? databaseId);
 }
 
 public class DatabaseService : IDatabaseService
@@ -135,6 +136,43 @@ public class DatabaseService : IDatabaseService
                 HasError = true
             });
             throw;
+        }
+    }
+
+    public async Task<IEnumerable<AffiliateUser>> SearchAffiliatesAsync(string searchTerm, string? databaseId)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+        {
+            return new List<AffiliateUser>();
+        }
+
+        var database = GetDatabase(databaseId);
+        var connectionString = database.GetConnectionString();
+
+        try
+        {
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            var sql = @"
+                SELECT TOP 20 
+                    userid AS UserId, 
+                    username AS Username 
+                FROM _V2_Agent.HierarchicalUsers WITH(NOLOCK) 
+                WHERE discriminator = 'AffiliateHierarchicalUser' 
+                    AND username LIKE @searchTerm + '%'
+                ORDER BY username";
+
+            var results = await connection.QueryAsync<AffiliateUser>(sql, new { searchTerm });
+            
+            _logger.LogInformation($"Búsqueda de afiliados '{searchTerm}': {results.Count()} resultados");
+            
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error buscando afiliados con término: {searchTerm}");
+            return new List<AffiliateUser>();
         }
     }
 }

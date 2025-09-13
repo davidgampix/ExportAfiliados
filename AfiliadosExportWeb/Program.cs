@@ -1,5 +1,8 @@
 using AfiliadosExportWeb.Hubs;
 using AfiliadosExportWeb.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +11,49 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Get JWT settings
+var jwtSecret = builder.Configuration["AuthSettings:JwtSecret"] ?? "AfiliadosExportSecretKey2024_MustBeAtLeast32Characters!";
+var key = Encoding.ASCII.GetBytes(jwtSecret);
+
+// Configure JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
+    };
+    
+    // Support for SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/exportHub"))
+            {
+                context.Token = accessToken;
+            }
+            
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // Add CORS for SignalR
 builder.Services.AddCors(options =>
@@ -24,6 +70,7 @@ builder.Services.AddCors(options =>
 // Register custom services
 builder.Services.AddSingleton<IDatabaseService, DatabaseService>();
 builder.Services.AddSingleton<IExcelExportService, ExcelExportService>();
+builder.Services.AddSingleton<IAuthService, AuthService>();
 
 // Add logging
 builder.Logging.ClearProviders();
@@ -47,11 +94,14 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.MapControllers();
-app.MapHub<ExportHub>("/exportHub");
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Fallback to index.html for SPA
-app.MapFallbackToFile("index.html");
+app.MapControllers();
+app.MapHub<ExportHub>("/exportHub").RequireAuthorization();
+
+// Login page doesn't require authentication
+app.MapFallbackToFile("login.html").AllowAnonymous();
 
 // Clean up temp files on startup
 var excelService = app.Services.GetRequiredService<IExcelExportService>();

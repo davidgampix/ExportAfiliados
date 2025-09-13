@@ -17,6 +17,10 @@
       "PackagePath": "staticwebassets\\lib\\signalr\\signalr.min.js"
     },
     {
+      "Id": "C:\\David\\Proyectos\\ExportAfiliados\\AfiliadosExportWeb\\wwwroot\\login.html",
+      "PackagePath": "staticwebassets\\login.html"
+    },
+    {
       "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.AfiliadosExportWeb.Microsoft.AspNetCore.StaticWebAssets.props",
       "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
     },

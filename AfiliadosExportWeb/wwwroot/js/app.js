@@ -1,17 +1,94 @@
 // SignalR Connection
 let connection = null;
 let currentFileName = null;
+let selectedAffiliateUsername = null;
+let searchTimeout = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check authentication first
+    if (!checkAuth()) {
+        return;
+    }
+    
     await loadDatabases();
     await initializeSignalR();
+    initializeAutocomplete();
+    displayUserInfo();
 });
+
+// Check authentication
+function checkAuth() {
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    if (!token) {
+        window.location.href = '/login.html';
+        return false;
+    }
+    
+    // Set default authorization header for all fetch requests
+    window.authToken = token;
+    
+    // Validate token
+    fetch('/api/auth/validate', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            localStorage.removeItem('authToken');
+            sessionStorage.removeItem('authToken');
+            window.location.href = '/login.html';
+        }
+    })
+    .catch(() => {
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
+        window.location.href = '/login.html';
+    });
+    
+    return true;
+}
+
+// Display user info
+function displayUserInfo() {
+    const username = localStorage.getItem('authUsername') || sessionStorage.getItem('authUsername') || 'Usuario';
+    
+    // Update username display
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    if (usernameDisplay) {
+        usernameDisplay.textContent = username;
+    }
+    
+    // Update user initial
+    const userInitial = document.getElementById('userInitial');
+    if (userInitial) {
+        userInitial.textContent = username.charAt(0).toUpperCase();
+    }
+    
+    console.log(`Logged in as: ${username}`);
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUsername');
+    localStorage.removeItem('authExpires');
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('authUsername');
+    window.location.href = '/login.html';
+}
 
 // Load available databases
 async function loadDatabases() {
     try {
-        const response = await fetch('/api/export/databases');
+        const token = window.authToken;
+        const response = await fetch('/api/export/databases', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         const databases = await response.json();
         
         const select = document.getElementById('databaseSelect');
@@ -36,8 +113,12 @@ async function loadDatabases() {
 
 // Initialize SignalR connection
 async function initializeSignalR() {
+    const token = window.authToken;
+    
     connection = new signalR.HubConnectionBuilder()
-        .withUrl("/exportHub")
+        .withUrl("/exportHub", {
+            accessTokenFactory: () => token
+        })
         .withAutomaticReconnect()
         .build();
 
@@ -68,6 +149,118 @@ async function initializeSignalR() {
     }
 }
 
+// Initialize autocomplete
+function initializeAutocomplete() {
+    const affiliateInput = document.getElementById('affiliateInput');
+    const affiliateDropdown = document.getElementById('affiliateDropdown');
+    const selectedAffiliateSpan = document.getElementById('selectedAffiliate');
+
+    // Input event for searching
+    affiliateInput.addEventListener('input', async (e) => {
+        const searchTerm = e.target.value.trim();
+        
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+
+        // Clear selected affiliate if user is typing
+        if (selectedAffiliateUsername && selectedAffiliateUsername !== searchTerm) {
+            selectedAffiliateUsername = null;
+            selectedAffiliateSpan.textContent = '';
+        }
+
+        // Hide dropdown if search term is too short
+        if (searchTerm.length < 2) {
+            affiliateDropdown.classList.add('hidden');
+            affiliateDropdown.innerHTML = '';
+            return;
+        }
+
+        // Debounce search
+        searchTimeout = setTimeout(async () => {
+            await searchAffiliates(searchTerm);
+        }, 300);
+    });
+
+    // Click outside to close dropdown
+    document.addEventListener('click', (e) => {
+        if (!affiliateInput.contains(e.target) && !affiliateDropdown.contains(e.target)) {
+            affiliateDropdown.classList.add('hidden');
+        }
+    });
+
+    // Focus event
+    affiliateInput.addEventListener('focus', async () => {
+        const searchTerm = affiliateInput.value.trim();
+        if (searchTerm.length >= 2 && !selectedAffiliateUsername) {
+            await searchAffiliates(searchTerm);
+        }
+    });
+}
+
+// Search affiliates
+async function searchAffiliates(searchTerm) {
+    const affiliateDropdown = document.getElementById('affiliateDropdown');
+    const databaseSelect = document.getElementById('databaseSelect');
+    const databaseId = databaseSelect.value;
+
+    try {
+        // Show loading in dropdown
+        affiliateDropdown.innerHTML = `
+            <div class="p-3 text-center">
+                <span class="loading loading-spinner loading-sm"></span>
+                <span class="ml-2">Buscando...</span>
+            </div>
+        `;
+        affiliateDropdown.classList.remove('hidden');
+
+        const token = window.authToken;
+        const response = await fetch(`/api/export/affiliates/search?term=${encodeURIComponent(searchTerm)}&databaseId=${databaseId || ''}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const affiliates = await response.json();
+
+        if (affiliates.length === 0) {
+            affiliateDropdown.innerHTML = `
+                <div class="p-3 text-center text-base-content/60">
+                    No se encontraron afiliados
+                </div>
+            `;
+        } else {
+            affiliateDropdown.innerHTML = affiliates.map(affiliate => `
+                <div class="hover:bg-base-200 cursor-pointer p-3 border-b border-base-200 last:border-b-0"
+                     onclick="selectAffiliate('${affiliate.username.replace(/'/g, "\\'")}')">
+                    <div class="font-semibold">${affiliate.username}</div>
+                    <div class="text-xs text-base-content/60">ID: ${affiliate.userId}</div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error searching affiliates:', error);
+        affiliateDropdown.innerHTML = `
+            <div class="p-3 text-center text-error">
+                Error al buscar afiliados
+            </div>
+        `;
+    }
+}
+
+// Select affiliate from dropdown
+function selectAffiliate(username) {
+    const affiliateInput = document.getElementById('affiliateInput');
+    const affiliateDropdown = document.getElementById('affiliateDropdown');
+    const selectedAffiliateSpan = document.getElementById('selectedAffiliate');
+
+    affiliateInput.value = username;
+    selectedAffiliateUsername = username;
+    selectedAffiliateSpan.textContent = `Afiliado seleccionado: ${username}`;
+    affiliateDropdown.classList.add('hidden');
+    affiliateDropdown.innerHTML = '';
+}
+
 // Start export process
 async function startExport() {
     const affiliateInput = document.getElementById('affiliateInput');
@@ -76,7 +269,7 @@ async function startExport() {
     const databaseId = databaseSelect.value;
 
     if (!rootAffiliate) {
-        showToast('Por favor ingrese el nombre del afiliado', 'warning');
+        showToast('Por favor seleccione o ingrese un afiliado', 'warning');
         affiliateInput.focus();
         return;
     }
@@ -181,21 +374,47 @@ function getStatusText(status) {
 }
 
 // Download file
-function downloadFile() {
+async function downloadFile() {
     if (!currentFileName) {
         showToast('No hay archivo para descargar', 'warning');
         return;
     }
 
-    const downloadUrl = `/api/export/download/${encodeURIComponent(currentFileName)}`;
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = currentFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+        const token = window.authToken;
+        const response = await fetch(`/api/export/download/${encodeURIComponent(currentFileName)}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-    showToast('Descarga iniciada', 'info');
+        if (!response.ok) {
+            throw new Error('Error al descargar el archivo');
+        }
+
+        // Get the blob from response
+        const blob = await response.blob();
+        
+        // Create a download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = currentFileName;
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+
+        showToast('Descarga completada', 'success');
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        showToast('Error al descargar el archivo', 'error');
+    }
 }
 
 // Reset form
@@ -208,7 +427,10 @@ function resetForm() {
     document.getElementById('progressBar').style.width = '0%';
     document.getElementById('rowsInfo').classList.add('hidden');
     document.getElementById('timeInfo').classList.add('hidden');
+    document.getElementById('selectedAffiliate').textContent = '';
+    document.getElementById('affiliateDropdown').classList.add('hidden');
     currentFileName = null;
+    selectedAffiliateUsername = null;
 }
 
 // Show error

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using AfiliadosExportWeb.Services;
 using AfiliadosExportWeb.Models;
 
@@ -6,6 +7,7 @@ namespace AfiliadosExportWeb.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ExportController : ControllerBase
 {
     private readonly IExcelExportService _excelExportService;
@@ -64,6 +66,26 @@ public class ExportController : ControllerBase
         {
             _logger.LogError(ex, "Error obteniendo bases de datos disponibles");
             return StatusCode(500, new { message = "Error al obtener las bases de datos" });
+        }
+    }
+
+    [HttpGet("affiliates/search")]
+    public async Task<IActionResult> SearchAffiliates([FromQuery] string term, [FromQuery] string? databaseId = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(term) || term.Length < 2)
+            {
+                return Ok(new List<AffiliateUser>());
+            }
+
+            var affiliates = await _databaseService.SearchAffiliatesAsync(term, databaseId);
+            return Ok(affiliates);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error buscando afiliados con término: {term}");
+            return StatusCode(500, new { message = "Error al buscar afiliados" });
         }
     }
 

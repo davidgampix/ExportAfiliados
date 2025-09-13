@@ -77,3 +77,4 @@ C:\David\Proyectos\ExportAfiliados\AfiliadosExportWeb\obj\Debug\net8.0\refint\Af
 C:\David\Proyectos\ExportAfiliados\AfiliadosExportWeb\obj\Debug\net8.0\AfiliadosExportWeb.pdb
 C:\David\Proyectos\ExportAfiliados\AfiliadosExportWeb\obj\Debug\net8.0\AfiliadosExportWeb.genruntimeconfig.cache
 C:\David\Proyectos\ExportAfiliados\AfiliadosExportWeb\obj\Debug\net8.0\ref\AfiliadosExportWeb.dll
+C:\David\Proyectos\ExportAfiliados\AfiliadosExportWeb\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
