@@ -47,44 +47,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FilePath).HasMaxLength(500);
         });
 
-        // Datos iniciales
-        modelBuilder.Entity<Operation>().HasData(
-            new Operation
-            {
-                Id = 1,
-                Code = "sportsbet",
-                Name = "SportsBet Afiliados",
-                Server = "54.226.82.137",
-                Database = "SportsBet_Afiliados",
-                ConnectionString = "Server=54.226.82.137;Database=SportsBet_Afiliados;User Id=SportsBetLogin;Password=8B24BDF8-9541-47F8-9957-B63DD87FEFCE;TrustServerCertificate=true;Connection Timeout=30;Command Timeout=600;",
-                IsActive = true,
-                IsDefault = true,
-                CreatedAt = DateTime.UtcNow
-            },
-            new Operation
-            {
-                Id = 2,
-                Code = "cdl",
-                Name = "CDL Afiliados",
-                Server = "54.226.82.137",
-                Database = "CDL_Afiliados",
-                ConnectionString = "Server=54.226.82.137;Database=CDL_Afiliados;User Id=SportsBetLogin;Password=8B24BDF8-9541-47F8-9957-B63DD87FEFCE;TrustServerCertificate=true;Connection Timeout=30;Command Timeout=600;",
-                IsActive = true,
-                IsDefault = false,
-                CreatedAt = DateTime.UtcNow
-            },
-            new Operation
-            {
-                Id = 3,
-                Code = "formowin",
-                Name = "FormoWin Afiliados",
-                Server = "54.226.82.137",
-                Database = "FormoWin_Afiliados",
-                ConnectionString = "Server=54.226.82.137;Database=FormoWin_Afiliados;User Id=SportsBetLogin;Password=8B24BDF8-9541-47F8-9957-B63DD87FEFCE;TrustServerCertificate=true;Connection Timeout=30;Command Timeout=600;",
-                IsActive = true,
-                IsDefault = false,
-                CreatedAt = DateTime.UtcNow
-            }
-        );
+        // Sin datos iniciales - Las operaciones se gestionan desde appsettings.json
+        // La tabla Operations en SQLite solo se usa para el historial del panel admin si se decide implementar en el futuro
     }
 }
