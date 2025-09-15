@@ -203,3 +203,5 @@ Desktop.ini
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+bin/

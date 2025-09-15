@@ -1,6 +1,8 @@
 using AfiliadosExportWeb.Hubs;
 using AfiliadosExportWeb.Services;
+using AfiliadosExportWeb.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -11,6 +13,11 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Configure SQLite Database
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+                     "Data Source=affiliates.db"));
 
 // Get JWT settings
 var jwtSecret = builder.Configuration["AuthSettings:JwtSecret"] ?? "AfiliadosExportSecretKey2024_MustBeAtLeast32Characters!";
@@ -71,6 +78,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IDatabaseService, DatabaseService>();
 builder.Services.AddSingleton<IExcelExportService, ExcelExportService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
+builder.Services.AddScoped<IOperationService, OperationService>();
+builder.Services.AddScoped<IHistoryService, HistoryService>();
 
 // Add logging
 builder.Logging.ClearProviders();
@@ -78,6 +87,13 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 var app = builder.Build();
+
+// Initialize database
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Exportador de Afiliados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.24/dist/full.min.css" rel="stylesheet" type="text/css" />
+</head>
+<body class="bg-base-200 min-h-screen">
+    <!-- Header -->
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="container mx-auto">
+            <div class="flex-1">
+                <h1 class="text-2xl font-bold text-primary">Panel de Administración</h1>
+            </div>
+            <div class="flex-none gap-2">
+                <a href="/" class="btn btn-ghost">Volver al Sistema</a>
+                <button class="btn btn-ghost btn-circle" onclick="toggleTheme()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Tabs -->
+        <div class="tabs tabs-boxed mb-6">
+            <a class="tab tab-active" onclick="showTab('operations')">Operaciones</a>
+            <a class="tab" onclick="showTab('history')">Historial de Descargas</a>
+            <a class="tab" onclick="showTab('statistics')">Estadísticas</a>
+        </div>
+
+        <!-- Operations Tab -->
+        <div id="operationsTab" class="tab-content">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="card-title">Gestión de Operaciones</h2>
+                        <button class="btn btn-primary btn-sm" onclick="showAddOperationModal()">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Nueva Operación
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Servidor</th>
+                                    <th>Base de Datos</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="operationsTableBody">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="historyTab" class="tab-content hidden">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="card-title">Historial de Descargas</h2>
+                        <button class="btn btn-error btn-sm" onclick="clearAllHistory()">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Limpiar Todo
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra table-compact">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Afiliado</th>
+                                    <th>Usuario</th>
+                                    <th>Operación</th>
+                                    <th>Registros</th>
+                                    <th>Tamaño</th>
+                                    <th>Tiempo</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="statisticsTab" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="stat bg-base-100 shadow">
+                    <div class="stat-title">Total Descargas</div>
+                    <div class="stat-value text-primary" id="statTotalDownloads">0</div>
+                </div>
+                <div class="stat bg-base-100 shadow">
+                    <div class="stat-title">Tamaño Total</div>
+                    <div class="stat-value text-secondary" id="statTotalSize">0 GB</div>
+                </div>
+                <div class="stat bg-base-100 shadow">
+                    <div class="stat-title">Total Registros</div>
+                    <div class="stat-value text-accent" id="statTotalRecords">0</div>
+                </div>
+                <div class="stat bg-base-100 shadow">
+                    <div class="stat-title">Tiempo Promedio</div>
+                    <div class="stat-value text-info" id="statAvgTime">0s</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h3 class="card-title">Top Afiliados</h3>
+                        <div id="topAffiliates"></div>
+                    </div>
+                </div>
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body">
+                        <h3 class="card-title">Descargas por Operación</h3>
+                        <div id="downloadsByOperation"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar operación -->
+    <dialog id="operationModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg" id="modalTitle">Nueva Operación</h3>
+            <form id="operationForm" class="py-4">
+                <input type="hidden" id="operationId" />
+                
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Código</span>
+                    </label>
+                    <input type="text" id="operationCode" class="input input-bordered" required />
+                </div>
+                
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Nombre</span>
+                    </label>
+                    <input type="text" id="operationName" class="input input-bordered" required />
+                </div>
+                
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Servidor</span>
+                    </label>
+                    <input type="text" id="operationServer" class="input input-bordered" required />
+                </div>
+                
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Base de Datos</span>
+                    </label>
+                    <input type="text" id="operationDatabase" class="input input-bordered" required />
+                </div>
+                
+                <div class="form-control mb-3">
+                    <label class="label">
+                        <span class="label-text">Connection String</span>
+                    </label>
+                    <textarea id="operationConnectionString" class="textarea textarea-bordered" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-control mb-3">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Activo</span>
+                        <input type="checkbox" id="operationIsActive" class="checkbox" checked />
+                    </label>
+                </div>
+                
+                <div class="form-control mb-3">
+                    <label class="label cursor-pointer">
+                        <span class="label-text">Por defecto</span>
+                        <input type="checkbox" id="operationIsDefault" class="checkbox" />
+                    </label>
+                </div>
+            </form>
+            <div class="modal-action">
+                <button class="btn btn-primary" onclick="saveOperation()">Guardar</button>
+                <button class="btn" onclick="closeOperationModal()">Cancelar</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="/js/admin.js"></script>
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</body>
+</html>
