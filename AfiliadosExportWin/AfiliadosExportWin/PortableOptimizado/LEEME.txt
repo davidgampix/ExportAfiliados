@@ -1,0 +1,14 @@
+Exportador de Afiliados - Version Portable 
+========================================== 
+ 
+Requisitos: 
+- Windows 10/11 x64 
+- NO requiere .NET instalado 
+ 
+Como usar: 
+1. Ejecutar "Ejecutar.bat" o "AfiliadosExportWin.exe" 
+2. La configuracion esta en "appsettings.json" 
+3. Los archivos Excel se guardan en Documentos\ExportacionesAfiliados 
+ 
+Nota: La primera vez puede tardar unos segundos en iniciar 
+      mientras se descomprime el ejecutable. 
