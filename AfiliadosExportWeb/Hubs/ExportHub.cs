@@ -53,6 +53,9 @@ public class ExportHub : Hub
         var cts = new CancellationTokenSource();
         _activeCancellations[connectionId] = cts;
 
+        // CancellationTokenSource separado para el cronómetro
+        var timerCts = new CancellationTokenSource();
+
         try
         {
             // Validación
@@ -71,61 +74,96 @@ public class ExportHub : Hub
             var progress = new Progress<ExportProgress>(async update =>
             {
                 await Clients.Caller.SendAsync("ExportProgress", update);
+
+                // Cancelar el cronómetro si se completa o hay error
+                if (update.IsComplete || update.HasError)
+                {
+                    try
+                    {
+                        timerCts?.Cancel();
+                    }
+                    catch
+                    {
+                        // Ignorar si ya está disposed
+                    }
+                }
             });
 
-            // Iniciar cronómetro en segundo plano
-            var stopwatchTask = StartStopwatchAsync(connectionId, cts.Token);
+            // Iniciar cronómetro en segundo plano con su propio token
+            var stopwatchTask = StartStopwatchAsync(connectionId, timerCts.Token);
 
-            // Obtener datos de la base de datos
-            var data = await _databaseService.GetHierarchicalPlayersAsync(
-                request.RootAffiliate,
-                request.DatabaseId,
-                progress,
-                cts.Token);
-
-            if (!data.Any())
+            try
             {
+                // Obtener datos de la base de datos
+                var data = await _databaseService.GetHierarchicalPlayersAsync(
+                    request.RootAffiliate,
+                    request.DatabaseId,
+                    progress,
+                    cts.Token);
+
+                if (!data.Any())
+                {
+                    await Clients.Caller.SendAsync("ExportProgress", new ExportProgress
+                    {
+                        Status = "error",
+                        Message = "No se encontraron datos para el afiliado especificado",
+                        HasError = true
+                    });
+                    return;
+                }
+
+                // Generar Excel
+                var filePath = await _excelExportService.GenerateExcelAsync(
+                    data,
+                    request.RootAffiliate,
+                    progress,
+                    cts.Token);
+
+                _logger.LogInformation($"Exportación completada: {filePath}");
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation($"Exportación cancelada por el usuario para {request.RootAffiliate}");
+                await Clients.Caller.SendAsync("ExportProgress", new ExportProgress
+                {
+                    Status = "cancelled",
+                    Message = "Exportación cancelada por el usuario",
+                    HasError = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error en exportación para {request.RootAffiliate}");
                 await Clients.Caller.SendAsync("ExportProgress", new ExportProgress
                 {
                     Status = "error",
-                    Message = "No se encontraron datos para el afiliado especificado",
+                    Message = $"Error: {ex.Message}",
                     HasError = true
                 });
-                return;
             }
-
-            // Generar Excel
-            var filePath = await _excelExportService.GenerateExcelAsync(
-                data,
-                request.RootAffiliate,
-                progress,
-                cts.Token);
-
-            _logger.LogInformation($"Exportación completada: {filePath}");
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation($"Exportación cancelada por el usuario para {request.RootAffiliate}");
-            await Clients.Caller.SendAsync("ExportProgress", new ExportProgress
-            {
-                Status = "cancelled",
-                Message = "Exportación cancelada por el usuario",
-                HasError = true
-            });
+            // Normal cuando se cancela el proceso completo
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error en exportación para {request.RootAffiliate}");
-            await Clients.Caller.SendAsync("ExportProgress", new ExportProgress
-            {
-                Status = "error",
-                Message = $"Error: {ex.Message}",
-                HasError = true
-            });
+            _logger.LogError(ex, $"Error general en exportación para {request.RootAffiliate}");
         }
         finally
         {
-            // Limpiar el CancellationTokenSource
+            // Limpiar el CancellationTokenSource del cronómetro
+            try
+            {
+                timerCts?.Cancel();
+                timerCts?.Dispose();
+            }
+            catch
+            {
+                // Ignorar si ya está disposed
+            }
+
+            // Limpiar el CancellationTokenSource de la exportación
             _activeCancellations.TryRemove(connectionId, out _);
             cts?.Dispose();
         }

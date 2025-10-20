@@ -345,34 +345,86 @@ async function cancelExport() {
 
 // Update progress UI
 function updateProgress(progress) {
-    const progressBar = document.getElementById('progressBar');
-    const statusText = document.getElementById('statusText');
-    const messageText = document.getElementById('messageText');
-    const progressTitle = document.getElementById('progressTitle');
-    const progressIcon = document.getElementById('progressIcon');
+    console.log('===== updateProgress called ====='); // DEBUG
+    console.log('Progress update:', progress); // DEBUG
+    console.log('isExporting:', isExporting); // DEBUG
+    console.log('progress.status:', progress.status); // DEBUG
 
-    // Update progress bar
-    progressBar.style.width = `${progress.percentComplete || 0}%`;
+    // IMPORTANTE: Ignorar actualizaciones si ya terminó
+    const shouldIgnore = !isExporting && progress.status !== 'completed' && !progress.hasError;
+    console.log('shouldIgnore?', shouldIgnore, '(!isExporting:', !isExporting, 'status !== completed:', progress.status !== 'completed', '!hasError:', !progress.hasError, ')'); // DEBUG
 
-    // Update status
-    statusText.textContent = getStatusText(progress.status);
-    messageText.textContent = progress.message;
-
-    // Update rows info
-    if (progress.currentRows > 0 || progress.totalRows > 0) {
-        document.getElementById('rowsInfo').classList.remove('hidden');
-        document.getElementById('rowsText').textContent = 
-            `${(progress.currentRows || 0).toLocaleString()} / ${(progress.totalRows || 0).toLocaleString()}`;
+    if (shouldIgnore) {
+        console.log('⛔ Ignoring update - export already finished'); // DEBUG
+        return;
     }
 
-    // Update time info
-    if (progress.elapsedTime) {
-        document.getElementById('timeInfo').classList.remove('hidden');
-        document.getElementById('timeText').textContent = progress.elapsedTime;
+    console.log('✓ Processing update...'); // DEBUG
+
+    try {
+        const progressBar = document.getElementById('progressBar');
+        const statusText = document.getElementById('statusText');
+        const messageText = document.getElementById('messageText');
+        const progressTitle = document.getElementById('progressTitle');
+        const progressIcon = document.getElementById('progressIcon');
+
+        // Update progress bar
+        console.log('Updating progress bar...'); // DEBUG
+        progressBar.style.width = `${progress.percentComplete || 0}%`;
+
+        // Update status
+        console.log('Updating status text...'); // DEBUG
+        statusText.textContent = getStatusText(progress.status);
+        messageText.textContent = progress.message;
+
+        // Update rows info
+        console.log('Updating rows info...'); // DEBUG
+        if (progress.currentRows > 0 || progress.totalRows > 0) {
+            document.getElementById('rowsInfo').classList.remove('hidden');
+            document.getElementById('rowsText').textContent =
+                `${(progress.currentRows || 0).toLocaleString()} / ${(progress.totalRows || 0).toLocaleString()}`;
+        }
+
+        // Update time info (usando timerText, no timeText)
+        console.log('Updating time info...'); // DEBUG
+        if (progress.elapsedTime) {
+            // El elemento es timerInfo, no timeInfo
+            const timerInfoElement = document.getElementById('timerInfo');
+            if (timerInfoElement) {
+                timerInfoElement.classList.remove('hidden');
+            }
+            const timerTextElement = document.getElementById('timerText');
+            if (timerTextElement) {
+                timerTextElement.textContent = progress.elapsedTime;
+            }
+        }
+        console.log('Basic updates completed'); // DEBUG
+    } catch (error) {
+        console.error('❌ Error updating UI elements:', error); // DEBUG
     }
 
-    // Handle completion
-    if (progress.isComplete) {
+    // Handle completion PRIMERO - tiene prioridad sobre errores
+    console.log('Checking completion - status:', progress.status, 'type:', typeof progress.status); // DEBUG
+    console.log('Status length:', progress.status?.length); // DEBUG
+    console.log('Status charCodes:', progress.status ? Array.from(progress.status).map(c => c.charCodeAt(0)) : 'N/A'); // DEBUG
+    console.log('Comparison result (===):', progress.status === 'completed'); // DEBUG
+    console.log('Comparison result (includes):', progress.status?.includes('completed')); // DEBUG
+    console.log('Comparison result (trim):', progress.status?.trim() === 'completed'); // DEBUG
+
+    // IMPORTANTE: El status 'completed' tiene PRIORIDAD sobre hasError
+    // Usar múltiples formas de verificar por si hay problemas de encoding
+    const statusStr = String(progress.status || '').toLowerCase().trim();
+    const isCompleted = statusStr === 'completed' ||
+                       progress.status === 'completed' ||
+                       statusStr.includes('complete');
+    console.log('statusStr:', statusStr); // DEBUG
+    console.log('isCompleted?', isCompleted); // DEBUG
+
+    if (isCompleted) {
+        console.log('✅ Export completed! Showing download section...'); // DEBUG
+        console.log('fileName:', progress.fileName); // DEBUG
+        console.log('downloadSection element:', document.getElementById('downloadSection')); // DEBUG
+
         isExporting = false;
         currentFileName = progress.fileName;
         progressTitle.textContent = 'Completado';
@@ -382,18 +434,35 @@ function updateProgress(progress) {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>`;
 
-        document.getElementById('cancelSection').classList.add('hidden');
-        document.getElementById('downloadSection').classList.remove('hidden');
-        document.getElementById('randomMessageDiv').classList.add('hidden');
-        document.getElementById('fileNameText').textContent = progress.fileName || 'archivo.xlsx';
+        const cancelSection = document.getElementById('cancelSection');
+        const downloadSection = document.getElementById('downloadSection');
+        const randomMessageDiv = document.getElementById('randomMessageDiv');
+
+        console.log('Hiding cancel section...'); // DEBUG
+        cancelSection.classList.add('hidden');
+
+        console.log('Showing download section...'); // DEBUG
+        downloadSection.classList.remove('hidden');
+
+        console.log('Hiding random message...'); // DEBUG
+        randomMessageDiv.classList.add('hidden');
+
+        document.getElementById('fileNameText').textContent = currentFileName || 'archivo.xlsx';
         document.getElementById('fileSizeText').textContent =
             `Tamaño: ${progress.fileSizeMB || 0} MB | Tiempo: ${progress.elapsedTime || '0s'}`;
 
+        console.log('Download section classes:', downloadSection.className); // DEBUG
         showToast('Exportación completada exitosamente', 'success');
+        return; // Salir inmediatamente - NO ejecutar el bloque de error
     }
 
-    // Handle error
-    if (progress.hasError) {
+    console.log('NOT completed, continuing...'); // DEBUG
+
+    // Handle error - SOLO si NO está completado
+    const hasError = progress.hasError || progress.HasError;
+    console.log('hasError?', hasError); // DEBUG
+    if (hasError && progress.status !== 'completed') {
+        console.log('❌ Export error!'); // DEBUG
         isExporting = false;
         showError(progress.message);
     }
@@ -401,6 +470,11 @@ function updateProgress(progress) {
 
 // Update timer UI
 function updateTimer(timerData) {
+    // No actualizar si la exportación ya terminó
+    if (!isExporting) {
+        return;
+    }
+
     const timerText = document.getElementById('timerText');
     const randomMessageDiv = document.getElementById('randomMessageDiv');
     const randomMessageText = document.getElementById('randomMessageText');
