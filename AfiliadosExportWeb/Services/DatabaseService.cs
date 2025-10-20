@@ -91,18 +91,18 @@ public class DatabaseService : IDatabaseService
 
             var startTime = DateTime.Now;
 
-            // Ejecutar el stored procedure
+            // Ejecutar el stored procedure sin timeout (puede tardar mucho)
             var result = await connection.QueryAsync(
                 "[_V2_].[GetHierarchicalPlayersEmailVerified]",
                 new { RootAffiliate = rootAffiliate },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 600);
+                commandTimeout: 0); // 0 = sin timeout
 
             var dataList = result.ToList();
             var totalRows = dataList.Count;
 
             var elapsedTime = DateTime.Now - startTime;
-            
+
             progress.Report(new ExportProgress
             {
                 Status = "data_loaded",

@@ -3,6 +3,7 @@ let connection = null;
 let currentFileName = null;
 let selectedAffiliateUsername = null;
 let searchTimeout = null;
+let isExporting = false;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -125,6 +126,14 @@ async function initializeSignalR() {
     // Configure event handlers
     connection.on("ExportProgress", (progress) => {
         updateProgress(progress);
+    });
+
+    connection.on("TimerUpdate", (timerData) => {
+        updateTimer(timerData);
+    });
+
+    connection.on("ExportCancelled", () => {
+        showToast('Exportación cancelada', 'warning');
     });
 
     connection.onreconnecting(() => {
@@ -276,19 +285,23 @@ async function startExport() {
 
     // Reset state
     currentFileName = null;
+    isExporting = true;
     document.getElementById('progressCard').classList.remove('hidden');
     document.getElementById('downloadSection').classList.add('hidden');
     document.getElementById('errorSection').classList.add('hidden');
+    document.getElementById('cancelSection').classList.remove('hidden');
     document.getElementById('exportBtn').disabled = true;
     affiliateInput.disabled = true;
     databaseSelect.disabled = true;
 
-    // Reset progress
+    // Reset progress and timer
     updateProgress({
         status: 'starting',
         message: 'Iniciando exportación...',
         percentComplete: 0
     });
+    document.getElementById('timerText').textContent = '00:00';
+    document.getElementById('randomMessageDiv').classList.add('hidden');
 
     try {
         if (connection.state === signalR.HubConnectionState.Disconnected) {
@@ -303,6 +316,30 @@ async function startExport() {
         console.error("Error starting export: ", err);
         showError('Error al iniciar la exportación');
         resetForm();
+    }
+}
+
+// Cancel export process
+async function cancelExport() {
+    if (!isExporting) {
+        return;
+    }
+
+    const cancelBtn = document.getElementById('cancelBtn');
+    cancelBtn.disabled = true;
+    cancelBtn.innerHTML = '<span class="loading loading-spinner loading-sm mr-2"></span>Cancelando...';
+
+    try {
+        if (connection.state === signalR.HubConnectionState.Connected) {
+            await connection.invoke("CancelExport");
+        }
+    } catch (err) {
+        console.error("Error cancelling export: ", err);
+        showToast('Error al cancelar la exportación', 'error');
+    } finally {
+        setTimeout(() => {
+            resetForm();
+        }, 1000);
     }
 }
 
@@ -336,6 +373,7 @@ function updateProgress(progress) {
 
     // Handle completion
     if (progress.isComplete) {
+        isExporting = false;
         currentFileName = progress.fileName;
         progressTitle.textContent = 'Completado';
         progressIcon.classList.remove('loading', 'loading-spinner');
@@ -343,18 +381,37 @@ function updateProgress(progress) {
             <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>`;
-        
+
+        document.getElementById('cancelSection').classList.add('hidden');
         document.getElementById('downloadSection').classList.remove('hidden');
+        document.getElementById('randomMessageDiv').classList.add('hidden');
         document.getElementById('fileNameText').textContent = progress.fileName || 'archivo.xlsx';
-        document.getElementById('fileSizeText').textContent = 
+        document.getElementById('fileSizeText').textContent =
             `Tamaño: ${progress.fileSizeMB || 0} MB | Tiempo: ${progress.elapsedTime || '0s'}`;
-        
+
         showToast('Exportación completada exitosamente', 'success');
     }
 
     // Handle error
     if (progress.hasError) {
+        isExporting = false;
         showError(progress.message);
+    }
+}
+
+// Update timer UI
+function updateTimer(timerData) {
+    const timerText = document.getElementById('timerText');
+    const randomMessageDiv = document.getElementById('randomMessageDiv');
+    const randomMessageText = document.getElementById('randomMessageText');
+
+    // Update timer display
+    timerText.textContent = timerData.elapsedFormatted;
+
+    // Show random message after 10 seconds
+    if (timerData.elapsedSeconds > 10) {
+        randomMessageDiv.classList.remove('hidden');
+        randomMessageText.textContent = timerData.randomMessage;
     }
 }
 
@@ -368,6 +425,7 @@ function getStatusText(status) {
         'writing_excel': 'Escribiendo datos',
         'saving_excel': 'Guardando archivo',
         'completed': 'Completado',
+        'cancelled': 'Cancelado',
         'error': 'Error'
     };
     return statusMap[status] || status;
@@ -419,6 +477,7 @@ async function downloadFile() {
 
 // Reset form
 function resetForm() {
+    isExporting = false;
     document.getElementById('affiliateInput').value = '';
     document.getElementById('affiliateInput').disabled = false;
     document.getElementById('databaseSelect').disabled = false;
@@ -426,9 +485,21 @@ function resetForm() {
     document.getElementById('progressCard').classList.add('hidden');
     document.getElementById('progressBar').style.width = '0%';
     document.getElementById('rowsInfo').classList.add('hidden');
-    document.getElementById('timeInfo').classList.add('hidden');
+    document.getElementById('cancelSection').classList.add('hidden');
+    document.getElementById('randomMessageDiv').classList.add('hidden');
     document.getElementById('selectedAffiliate').textContent = '';
     document.getElementById('affiliateDropdown').classList.add('hidden');
+
+    // Reset cancel button
+    const cancelBtn = document.getElementById('cancelBtn');
+    cancelBtn.disabled = false;
+    cancelBtn.innerHTML = `
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        Cancelar Exportación
+    `;
+
     currentFileName = null;
     selectedAffiliateUsername = null;
 }
@@ -439,21 +510,23 @@ function showError(message) {
     const errorText = document.getElementById('errorText');
     const progressIcon = document.getElementById('progressIcon');
     const progressTitle = document.getElementById('progressTitle');
-    
+
     errorSection.classList.remove('hidden');
     errorText.textContent = message;
-    
+
     progressTitle.textContent = 'Error';
     progressIcon.classList.remove('loading', 'loading-spinner');
     progressIcon.innerHTML = `
         <svg class="w-6 h-6 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>`;
-    
+
+    document.getElementById('cancelSection').classList.add('hidden');
+    document.getElementById('randomMessageDiv').classList.add('hidden');
     document.getElementById('exportBtn').disabled = false;
     document.getElementById('affiliateInput').disabled = false;
     document.getElementById('databaseSelect').disabled = false;
-    
+
     showToast(message, 'error');
 }
 

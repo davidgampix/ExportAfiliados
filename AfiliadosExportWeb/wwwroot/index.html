@@ -146,10 +146,23 @@
                             <span class="font-semibold">Registros:</span>
                             <span id="rowsText">0 / 0</span>
                         </div>
-                        <div id="timeInfo" class="flex justify-between text-sm hidden">
-                            <span class="font-semibold">Tiempo:</span>
-                            <span id="timeText">0s</span>
+                        <div id="timerInfo" class="flex justify-between text-sm">
+                            <span class="font-semibold">Tiempo transcurrido:</span>
+                            <span id="timerText" class="text-primary font-mono text-lg">00:00</span>
                         </div>
+                        <div id="randomMessageDiv" class="text-center text-sm text-info italic mt-3 hidden">
+                            <span id="randomMessageText"></span>
+                        </div>
+                    </div>
+
+                    <!-- Cancel Button -->
+                    <div id="cancelSection" class="card-actions justify-center mt-4 hidden">
+                        <button id="cancelBtn" class="btn btn-error btn-outline" onclick="cancelExport()">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            Cancelar Exportación
+                        </button>
                     </div>
 
                     <!-- Download Button (Hidden until complete) -->
@@ -192,10 +205,12 @@
                         Información
                     </h2>
                     <ul class="list-disc list-inside space-y-1 text-sm opacity-75">
-                        <li>El proceso puede tomar varios minutos dependiendo de la cantidad de datos</li>
+                        <li>El proceso puede tomar varios minutos dependiendo de la cantidad de datos (hasta 15 min)</li>
+                        <li>Puede cancelar la exportación en cualquier momento</li>
+                        <li>Si hay más de 1,048,575 registros, se crearán múltiples hojas automáticamente</li>
                         <li>Los archivos generados se eliminan automáticamente después de 1 hora</li>
                         <li>El sistema procesa datos jerárquicos de jugadores con email verificado</li>
-                        <li>El archivo Excel incluye formato automático y filtros</li>
+                        <li>El archivo Excel incluye formato automático y filtros en cada hoja</li>
                     </ul>
                 </div>
             </div>
