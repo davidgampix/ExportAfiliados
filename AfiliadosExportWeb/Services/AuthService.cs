@@ -35,8 +35,33 @@ public class AuthService : IAuthService
 
     public LoginResponse? ValidateUser(LoginRequest request)
     {
-        // Validar credenciales
-        if (request.Username != _authSettings.Username || request.Password != _authSettings.Password)
+        // Buscar usuario en la lista de usuarios configurados
+        UserCredentials? user = null;
+
+        // Primero buscar en la lista de usuarios (nueva forma)
+        if (_authSettings.Users?.Count > 0)
+        {
+            user = _authSettings.Users.FirstOrDefault(u =>
+                u.Username.Equals(request.Username, StringComparison.OrdinalIgnoreCase) &&
+                u.Password == request.Password);
+        }
+
+        // Si no se encontró, verificar el usuario legacy (compatibilidad hacia atrás)
+        if (user == null &&
+            !string.IsNullOrEmpty(_authSettings.Username) &&
+            request.Username.Equals(_authSettings.Username, StringComparison.OrdinalIgnoreCase) &&
+            request.Password == _authSettings.Password)
+        {
+            user = new UserCredentials
+            {
+                Username = _authSettings.Username,
+                Password = _authSettings.Password,
+                Role = "Admin",
+                DisplayName = _authSettings.Username
+            };
+        }
+
+        if (user == null)
         {
             _logger.LogWarning($"Intento de login fallido para usuario: {request.Username}");
             return null;
@@ -46,30 +71,33 @@ public class AuthService : IAuthService
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_authSettings.JwtSecret);
         var expirationDate = DateTime.UtcNow.AddDays(_authSettings.ExpirationDays);
-        
+
+        var displayName = !string.IsNullOrEmpty(user.DisplayName) ? user.DisplayName : user.Username;
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.Name, request.Username),
-                new Claim(ClaimTypes.Role, "Admin"),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, user.Role),
+                new Claim("DisplayName", displayName),
                 new Claim("LoginTime", DateTime.UtcNow.ToString())
             }),
             Expires = expirationDate,
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key), 
+                new SymmetricSecurityKey(key),
                 SecurityAlgorithms.HmacSha256Signature)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var tokenString = tokenHandler.WriteToken(token);
 
-        _logger.LogInformation($"Login exitoso para usuario: {request.Username}");
+        _logger.LogInformation($"Login exitoso para usuario: {user.Username} ({displayName})");
 
         return new LoginResponse
         {
             Token = tokenString,
-            Username = request.Username,
+            Username = displayName,
             ExpiresAt = expirationDate
         };
     }

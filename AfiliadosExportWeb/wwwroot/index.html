@@ -108,6 +108,69 @@
                         </label>
                     </div>
 
+                    <!-- Filtros adicionales (ocultos hasta seleccionar afiliado) -->
+                    <div id="filtersSection" class="hidden mt-4 p-4 bg-base-200 rounded-lg">
+                        <h3 class="font-semibold text-sm mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                            </svg>
+                            Filtros de Exportación
+                        </h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Filtro de Estados (Multi-select con chips) -->
+                            <div class="form-control w-full">
+                                <label class="label">
+                                    <span class="label-text">Estado del Jugador</span>
+                                    <span class="label-text-alt text-info">Seleccione uno o más</span>
+                                </label>
+                                <div class="dropdown w-full">
+                                    <label tabindex="0" class="btn btn-outline w-full justify-between">
+                                        <span id="statusSelectLabel">Todos los estados</span>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </label>
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full">
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="0" />
+                                                <span>Pendiente de aprobación</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="1" />
+                                                <span>Aprobado</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="2" />
+                                                <span>Rechazado</span>
+                                            </label>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <!-- Chips de estados seleccionados -->
+                                <div id="statusChips" class="flex flex-wrap gap-2 mt-2"></div>
+                            </div>
+
+                            <!-- Filtro de Autoexclusión -->
+                            <div class="form-control w-full">
+                                <label class="label">
+                                    <span class="label-text">Autoexclusión</span>
+                                    <span class="label-text-alt text-info">Filtrar por autoexclusión</span>
+                                </label>
+                                <select id="selfExclusionSelect" class="select select-bordered w-full">
+                                    <option value="0" selected>Sin autoexclusión vigente</option>
+                                    <option value="1">Solo con autoexclusión vigente</option>
+                                    <option value="2">Todos (con y sin autoexclusión)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card-actions justify-end mt-6">
                         <button id="exportBtn" class="btn btn-primary" onclick="startExport()">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

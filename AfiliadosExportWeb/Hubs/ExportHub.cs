@@ -98,6 +98,8 @@ public class ExportHub : Hub
                 var data = await _databaseService.GetHierarchicalPlayersAsync(
                     request.RootAffiliate,
                     request.DatabaseId,
+                    request.StatusIds,
+                    request.SelfExclusionFilter,
                     progress,
                     cts.Token);
 

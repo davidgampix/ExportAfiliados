@@ -7,7 +7,7 @@ namespace AfiliadosExportWeb.Services;
 
 public interface IDatabaseService
 {
-    Task<IEnumerable<dynamic>> GetHierarchicalPlayersAsync(string rootAffiliate, string? databaseId, IProgress<ExportProgress> progress, CancellationToken cancellationToken);
+    Task<IEnumerable<dynamic>> GetHierarchicalPlayersAsync(string rootAffiliate, string? databaseId, string? statusIds, int selfExclusionFilter, IProgress<ExportProgress> progress, CancellationToken cancellationToken);
     DatabaseConfig GetDatabase(string? databaseId);
     List<DatabaseConfig> GetAvailableDatabases();
     Task<IEnumerable<AffiliateUser>> SearchAffiliatesAsync(string searchTerm, string? databaseId);
@@ -62,14 +62,16 @@ public class DatabaseService : IDatabaseService
     }
 
     public async Task<IEnumerable<dynamic>> GetHierarchicalPlayersAsync(
-        string rootAffiliate, 
-        string? databaseId, 
+        string rootAffiliate,
+        string? databaseId,
+        string? statusIds,
+        int selfExclusionFilter,
         IProgress<ExportProgress> progress,
         CancellationToken cancellationToken)
     {
         var database = GetDatabase(databaseId);
         var connectionString = database.GetConnectionString();
-        
+
         try
         {
             progress.Report(new ExportProgress
@@ -93,8 +95,12 @@ public class DatabaseService : IDatabaseService
 
             // Ejecutar el stored procedure sin timeout (puede tardar mucho)
             var result = await connection.QueryAsync(
-                "[_V2_].[GetHierarchicalPlayersEmailVerified]",
-                new { RootAffiliate = rootAffiliate },
+                "[_V2_].[GetAffiliatePlayersForExport]",
+                new {
+                    RootAffiliate = rootAffiliate,
+                    StatusIds = statusIds ?? "",
+                    SelfExclusionFilter = selfExclusionFilter
+                },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 0); // 0 = sin timeout
 

@@ -91,10 +91,10 @@ async function loadDatabases() {
             }
         });
         const databases = await response.json();
-        
+
         const select = document.getElementById('databaseSelect');
-        select.innerHTML = '';
-        
+        select.innerHTML = '<option value="">Seleccione una base de datos</option>';
+
         databases.forEach(db => {
             const option = document.createElement('option');
             option.value = db.id;
@@ -104,12 +104,77 @@ async function loadDatabases() {
             }
             select.appendChild(option);
         });
-        
+
         select.disabled = false;
+
+        // Initialize status checkboxes
+        initializeStatusFilters();
     } catch (error) {
         console.error('Error loading databases:', error);
         showToast('Error cargando bases de datos', 'error');
     }
+}
+
+// Initialize status filter checkboxes
+function initializeStatusFilters() {
+    const checkboxes = document.querySelectorAll('.status-checkbox');
+    const statusChips = document.getElementById('statusChips');
+    const statusSelectLabel = document.getElementById('statusSelectLabel');
+
+    const statusLabels = {
+        '0': 'Pendiente',
+        '1': 'Aprobado',
+        '2': 'Rechazado'
+    };
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            updateStatusChips();
+        });
+    });
+
+    function updateStatusChips() {
+        const selectedStatuses = Array.from(checkboxes)
+            .filter(cb => cb.checked)
+            .map(cb => ({ value: cb.value, label: statusLabels[cb.value] }));
+
+        // Update chips
+        statusChips.innerHTML = selectedStatuses.map(status => `
+            <span class="badge badge-primary gap-1">
+                ${status.label}
+                <button type="button" class="btn btn-ghost btn-xs p-0" onclick="removeStatusFilter('${status.value}')">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </span>
+        `).join('');
+
+        // Update label
+        if (selectedStatuses.length === 0) {
+            statusSelectLabel.textContent = 'Todos los estados';
+        } else if (selectedStatuses.length === 3) {
+            statusSelectLabel.textContent = 'Todos los estados';
+        } else {
+            statusSelectLabel.textContent = `${selectedStatuses.length} estado(s) seleccionado(s)`;
+        }
+    }
+}
+
+// Remove status filter (called from chip X button)
+function removeStatusFilter(value) {
+    const checkbox = document.querySelector(`.status-checkbox[value="${value}"]`);
+    if (checkbox) {
+        checkbox.checked = false;
+        checkbox.dispatchEvent(new Event('change'));
+    }
+}
+
+// Get selected status IDs as comma-separated string
+function getSelectedStatusIds() {
+    const checkboxes = document.querySelectorAll('.status-checkbox:checked');
+    const values = Array.from(checkboxes).map(cb => cb.value);
+    return values.join(',');
 }
 
 // Initialize SignalR connection
@@ -177,6 +242,8 @@ function initializeAutocomplete() {
         if (selectedAffiliateUsername && selectedAffiliateUsername !== searchTerm) {
             selectedAffiliateUsername = null;
             selectedAffiliateSpan.textContent = '';
+            // Ocultar filtros cuando se deselecciona el afiliado
+            document.getElementById('filtersSection').classList.add('hidden');
         }
 
         // Hide dropdown if search term is too short
@@ -262,20 +329,27 @@ function selectAffiliate(username) {
     const affiliateInput = document.getElementById('affiliateInput');
     const affiliateDropdown = document.getElementById('affiliateDropdown');
     const selectedAffiliateSpan = document.getElementById('selectedAffiliate');
+    const filtersSection = document.getElementById('filtersSection');
 
     affiliateInput.value = username;
     selectedAffiliateUsername = username;
     selectedAffiliateSpan.textContent = `Afiliado seleccionado: ${username}`;
     affiliateDropdown.classList.add('hidden');
     affiliateDropdown.innerHTML = '';
+
+    // Mostrar filtros cuando se selecciona un afiliado
+    filtersSection.classList.remove('hidden');
 }
 
 // Start export process
 async function startExport() {
     const affiliateInput = document.getElementById('affiliateInput');
     const databaseSelect = document.getElementById('databaseSelect');
+    const selfExclusionSelect = document.getElementById('selfExclusionSelect');
     const rootAffiliate = affiliateInput.value.trim();
     const databaseId = databaseSelect.value;
+    const statusIds = getSelectedStatusIds();
+    const selfExclusionFilter = parseInt(selfExclusionSelect.value) || 0;
 
     if (!rootAffiliate) {
         showToast('Por favor seleccione o ingrese un afiliado', 'warning');
@@ -294,6 +368,10 @@ async function startExport() {
     affiliateInput.disabled = true;
     databaseSelect.disabled = true;
 
+    // Disable filter controls during export
+    document.querySelectorAll('.status-checkbox').forEach(cb => cb.disabled = true);
+    selfExclusionSelect.disabled = true;
+
     // Reset progress and timer
     updateProgress({
         status: 'starting',
@@ -310,7 +388,9 @@ async function startExport() {
 
         await connection.invoke("StartExport", {
             rootAffiliate: rootAffiliate,
-            databaseId: databaseId
+            databaseId: databaseId,
+            statusIds: statusIds,
+            selfExclusionFilter: selfExclusionFilter
         });
     } catch (err) {
         console.error("Error starting export: ", err);
@@ -564,6 +644,17 @@ function resetForm() {
     document.getElementById('selectedAffiliate').textContent = '';
     document.getElementById('affiliateDropdown').classList.add('hidden');
 
+    // Ocultar filtros y resetear valores
+    document.getElementById('filtersSection').classList.add('hidden');
+    document.querySelectorAll('.status-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.disabled = false;
+    });
+    document.getElementById('selfExclusionSelect').value = '0';
+    document.getElementById('selfExclusionSelect').disabled = false;
+    document.getElementById('statusSelectLabel').textContent = 'Todos los estados';
+    document.getElementById('statusChips').innerHTML = '';
+
     // Reset cancel button
     const cancelBtn = document.getElementById('cancelBtn');
     cancelBtn.disabled = false;
@@ -600,6 +691,10 @@ function showError(message) {
     document.getElementById('exportBtn').disabled = false;
     document.getElementById('affiliateInput').disabled = false;
     document.getElementById('databaseSelect').disabled = false;
+
+    // Re-enable filter controls
+    document.querySelectorAll('.status-checkbox').forEach(cb => cb.disabled = false);
+    document.getElementById('selfExclusionSelect').disabled = false;
 
     showToast(message, 'error');
 }
