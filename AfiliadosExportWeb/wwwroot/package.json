@@ -1,0 +1,21 @@
+{
+  "name": "wwwroot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "npx @tailwindcss/cli -i ./css/input.css -o ./css/output.css",
+    "watch": "npx @tailwindcss/cli -i ./css/input.css -o ./css/output.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.17",
+    "daisyui": "^5.5.11",
+    "tailwindcss": "^4.1.17"
+  }
+}

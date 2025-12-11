@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* Custom animations */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+    animation: spin 2s linear infinite;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
