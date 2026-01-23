@@ -105,12 +105,12 @@
                             Filtros de Exportación
                         </h3>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Filtro de Estados (Multi-select con chips) -->
+                        <div class="grid grid-cols-1 gap-4">
+                            <!-- Filtro de Estado del Jugador (multi-select con chips) -->
                             <div class="form-control w-full">
                                 <label class="label">
                                     <span class="label-text">Estado del Jugador</span>
-                                    <span class="label-text-alt text-info">Seleccione uno o más</span>
+                                    <span class="label-text-alt text-info">Seleccione uno o más (vacío = todos)</span>
                                 </label>
                                 <div class="dropdown w-full">
                                     <label tabindex="0" class="btn btn-outline w-full justify-between">
@@ -119,42 +119,71 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                         </svg>
                                     </label>
-                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full">
+                                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-full max-h-60 overflow-y-auto">
                                         <li>
                                             <label class="label cursor-pointer justify-start gap-3">
-                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="0" />
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="Habilitado" />
+                                                <span>Habilitado</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="DISABLED" />
+                                                <span>Deshabilitado</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="DELETED" />
+                                                <span>Eliminado</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="LOCKED" />
+                                                <span>Bloqueado</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="SELF_EXCLUDED" />
+                                                <span>Autoexcluido</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="VOLUNTARY_PAUSE" />
+                                                <span>Pausa voluntaria</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="INCOMPLETE_REGISTRATION" />
+                                                <span>Registro incompleto</span>
+                                            </label>
+                                        </li>
+                                        <li>
+                                            <label class="label cursor-pointer justify-start gap-3">
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="PENDING_APPROVAL" />
                                                 <span>Pendiente de aprobación</span>
                                             </label>
                                         </li>
                                         <li>
                                             <label class="label cursor-pointer justify-start gap-3">
-                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="1" />
-                                                <span>Aprobado</span>
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="REJECTED" />
+                                                <span>Rechazado</span>
                                             </label>
                                         </li>
                                         <li>
                                             <label class="label cursor-pointer justify-start gap-3">
-                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="2" />
-                                                <span>Rechazado</span>
+                                                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary status-checkbox" value="TOO_MANY_FAILED_ATTEMPTS" />
+                                                <span>Demasiados intentos fallidos</span>
                                             </label>
                                         </li>
                                     </ul>
                                 </div>
                                 <!-- Chips de estados seleccionados -->
                                 <div id="statusChips" class="flex flex-wrap gap-2 mt-2"></div>
-                            </div>
-
-                            <!-- Filtro de Autoexclusión -->
-                            <div class="form-control w-full">
-                                <label class="label">
-                                    <span class="label-text">Autoexclusión</span>
-                                    <span class="label-text-alt text-info">Filtrar por autoexclusión</span>
-                                </label>
-                                <select id="selfExclusionSelect" class="select select-bordered w-full">
-                                    <option value="0" selected>Sin autoexclusión vigente</option>
-                                    <option value="1">Solo con autoexclusión vigente</option>
-                                    <option value="2">Todos (con y sin autoexclusión)</option>
-                                </select>
                             </div>
                         </div>
                     </div>

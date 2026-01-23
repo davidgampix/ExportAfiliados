@@ -6,7 +6,7 @@
 --   EXEC [_V2_].[GetAffiliatePlayersForExport] 'NombreAfiliado', 'Habilitado'                            -- Solo Habilitados
 --   EXEC [_V2_].[GetAffiliatePlayersForExport] 'NombreAfiliado', 'Habilitado,INCOMPLETE_REGISTRATION'    -- Múltiples estados
 --   EXEC [_V2_].[GetAffiliatePlayersForExport] 'NombreAfiliado', 'SELF_EXCLUDED'                         -- Solo Autoexcluidos
--- Base de datos: SportsBet_Afiliados
+-- Base de datos: SportsBetMZA_Afiliados
 --
 -- Parámetros:
 --   @rootAffiliate: Nombre del afiliado raíz
@@ -83,7 +83,7 @@ BEGIN
     INSERT INTO @PlayerIds (PlayerId)
     SELECT DISTINCT h.PlayerUserId
     FROM [_V2_Agent].[HierarchicalUsers] h WITH (NOLOCK)
-    INNER JOIN SportsBet_Online.dbo.Vw_Player pd WITH (NOLOCK) ON pd.Id = h.PlayerUserId
+    INNER JOIN SportsBetMZA_Online.dbo.Vw_Player pd WITH (NOLOCK) ON pd.Id = h.PlayerUserId
     WHERE h.Discriminator = 'PlayerHierarchicalUser'
     AND h.[HierarchyId].IsDescendantOf(@RootHierarchyId) = 1
     AND h.UserId != @RootId;
@@ -93,7 +93,7 @@ BEGIN
     SELECT
         p.PlayerId,
         (SELECT TOP 1 a.InsDate
-         FROM [SportsBet_Online].[Audit].[Activity] a WITH (NOLOCK)
+         FROM [SportsBetMZA_Online].[Audit].[Activity] a WITH (NOLOCK)
          WHERE a.Player_Id = p.PlayerId
          AND a.ActivityType_Id = 1  -- SystemLogin
          ORDER BY a.InsDate DESC)
@@ -103,12 +103,12 @@ BEGIN
     UPDATE #PlayerAuditData
     SET RegistrationDate = COALESCE(
         (SELECT TOP 1 a.InsDate
-         FROM [SportsBet_Online].[Audit].[Activity] a WITH (NOLOCK)
+         FROM [SportsBetMZA_Online].[Audit].[Activity] a WITH (NOLOCK)
          WHERE a.Player_Id = #PlayerAuditData.PlayerId
          AND a.ActivityType_Id = 3  -- SystemRegister
          ORDER BY a.InsDate ASC),
         (SELECT u.InsDate
-         FROM [SportsBet_Online].[dbo].[User] u WITH (NOLOCK)
+         FROM [SportsBetMZA_Online].[dbo].[User] u WITH (NOLOCK)
          WHERE u.Id = #PlayerAuditData.PlayerId)
     );
 
@@ -116,7 +116,7 @@ BEGIN
     UPDATE #PlayerAuditData
     SET LastDepositDate = (
         SELECT MAX(dn.InsDate)
-        FROM [SportsBet_Online].[Player].[DepositNotifications] dn WITH (NOLOCK)
+        FROM [SportsBetMZA_Online].[Player].[DepositNotifications] dn WITH (NOLOCK)
         WHERE dn.PlayerId = #PlayerAuditData.PlayerId
     );
 
@@ -177,7 +177,7 @@ BEGIN
         CAST(CASE
             WHEN EXISTS (
                 SELECT 1
-                FROM [SportsBet_Online].[Player].[DepositNotifications] dn WITH (NOLOCK)
+                FROM [SportsBetMZA_Online].[Player].[DepositNotifications] dn WITH (NOLOCK)
                 WHERE dn.PlayerId = pd.Id
             ) THEN 1 ELSE 0
         END AS BIT) as [Ha Depositado],
@@ -197,12 +197,12 @@ BEGIN
         mkt.UtmTerm as [UTM Term]
 
     FROM [_V2_Agent].[HierarchicalUsers] h WITH (NOLOCK)
-    INNER JOIN SportsBet_Online.dbo.Vw_Player pd WITH (NOLOCK) ON pd.Id = h.PlayerUserId
+    INNER JOIN SportsBetMZA_Online.dbo.Vw_Player pd WITH (NOLOCK) ON pd.Id = h.PlayerUserId
     LEFT JOIN #PlayerAuditData pad ON pad.PlayerId = pd.Id
     LEFT JOIN [_V2_Identity].[Users] affiliate WITH (NOLOCK) ON affiliate.Id = h.ParentId
-    LEFT JOIN [SportsBet_Online].[Player].[MarketingData] mkt WITH (NOLOCK) ON mkt.PlayerId = pd.Id
+    LEFT JOIN [SportsBetMZA_Online].[Player].[MarketingData] mkt WITH (NOLOCK) ON mkt.PlayerId = pd.Id
     -- JOIN a la vista de estados (misma lógica que BO Portal)
-    LEFT JOIN [SportsBet_Online].[Player].[vw_PlayerStatusCodes] pvs WITH (NOLOCK) ON pvs.PlayerId = pd.Id
+    LEFT JOIN [SportsBetMZA_Online].[Player].[vw_PlayerStatusCodes] pvs WITH (NOLOCK) ON pvs.PlayerId = pd.Id
 
     WHERE h.Discriminator = 'PlayerHierarchicalUser'
     AND h.[HierarchyId].IsDescendantOf(@RootHierarchyId) = 1

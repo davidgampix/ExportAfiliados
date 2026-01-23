@@ -121,10 +121,18 @@ function initializeStatusFilters() {
     const statusChips = document.getElementById('statusChips');
     const statusSelectLabel = document.getElementById('statusSelectLabel');
 
+    // Mapeo de códigos a etiquetas en español
     const statusLabels = {
-        '0': 'Pendiente',
-        '1': 'Aprobado',
-        '2': 'Rechazado'
+        'Habilitado': 'Habilitado',
+        'DISABLED': 'Deshabilitado',
+        'DELETED': 'Eliminado',
+        'LOCKED': 'Bloqueado',
+        'SELF_EXCLUDED': 'Autoexcluido',
+        'VOLUNTARY_PAUSE': 'Pausa voluntaria',
+        'INCOMPLETE_REGISTRATION': 'Registro incompleto',
+        'PENDING_APPROVAL': 'Pendiente aprobación',
+        'REJECTED': 'Rechazado',
+        'TOO_MANY_FAILED_ATTEMPTS': 'Demasiados intentos'
     };
 
     checkboxes.forEach(checkbox => {
@@ -136,7 +144,7 @@ function initializeStatusFilters() {
     function updateStatusChips() {
         const selectedStatuses = Array.from(checkboxes)
             .filter(cb => cb.checked)
-            .map(cb => ({ value: cb.value, label: statusLabels[cb.value] }));
+            .map(cb => ({ value: cb.value, label: statusLabels[cb.value] || cb.value }));
 
         // Update chips
         statusChips.innerHTML = selectedStatuses.map(status => `
@@ -153,7 +161,7 @@ function initializeStatusFilters() {
         // Update label
         if (selectedStatuses.length === 0) {
             statusSelectLabel.textContent = 'Todos los estados';
-        } else if (selectedStatuses.length === 3) {
+        } else if (selectedStatuses.length === 10) {
             statusSelectLabel.textContent = 'Todos los estados';
         } else {
             statusSelectLabel.textContent = `${selectedStatuses.length} estado(s) seleccionado(s)`;
@@ -170,8 +178,8 @@ function removeStatusFilter(value) {
     }
 }
 
-// Get selected status IDs as comma-separated string
-function getSelectedStatusIds() {
+// Get selected status codes as comma-separated string
+function getSelectedStatusCodes() {
     const checkboxes = document.querySelectorAll('.status-checkbox:checked');
     const values = Array.from(checkboxes).map(cb => cb.value);
     return values.join(',');
@@ -345,11 +353,9 @@ function selectAffiliate(username) {
 async function startExport() {
     const affiliateInput = document.getElementById('affiliateInput');
     const databaseSelect = document.getElementById('databaseSelect');
-    const selfExclusionSelect = document.getElementById('selfExclusionSelect');
     const rootAffiliate = affiliateInput.value.trim();
     const databaseId = databaseSelect.value;
-    const statusIds = getSelectedStatusIds();
-    const selfExclusionFilter = parseInt(selfExclusionSelect.value) || 0;
+    const statusCodeFilter = getSelectedStatusCodes();
 
     if (!rootAffiliate) {
         showToast('Por favor seleccione o ingrese un afiliado', 'warning');
@@ -370,7 +376,6 @@ async function startExport() {
 
     // Disable filter controls during export
     document.querySelectorAll('.status-checkbox').forEach(cb => cb.disabled = true);
-    selfExclusionSelect.disabled = true;
 
     // Reset progress and timer
     updateProgress({
@@ -389,8 +394,7 @@ async function startExport() {
         await connection.invoke("StartExport", {
             rootAffiliate: rootAffiliate,
             databaseId: databaseId,
-            statusIds: statusIds,
-            selfExclusionFilter: selfExclusionFilter
+            statusCodeFilter: statusCodeFilter
         });
     } catch (err) {
         console.error("Error starting export: ", err);
@@ -650,8 +654,6 @@ function resetForm() {
         cb.checked = false;
         cb.disabled = false;
     });
-    document.getElementById('selfExclusionSelect').value = '0';
-    document.getElementById('selfExclusionSelect').disabled = false;
     document.getElementById('statusSelectLabel').textContent = 'Todos los estados';
     document.getElementById('statusChips').innerHTML = '';
 
@@ -694,7 +696,6 @@ function showError(message) {
 
     // Re-enable filter controls
     document.querySelectorAll('.status-checkbox').forEach(cb => cb.disabled = false);
-    document.getElementById('selfExclusionSelect').disabled = false;
 
     showToast(message, 'error');
 }

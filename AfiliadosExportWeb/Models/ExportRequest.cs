@@ -4,8 +4,7 @@ public class ExportRequest
 {
     public string RootAffiliate { get; set; } = string.Empty;
     public string? DatabaseId { get; set; }
-    public string? StatusIds { get; set; }  // Lista de IDs separados por coma (0,1,2)
-    public int SelfExclusionFilter { get; set; } = 0;  // 0 = sin autoexcluidos, 1 = solo autoexcluidos, 2 = todos
+    public string? StatusCodeFilter { get; set; }  // Código de estado (vacío = todos, 'Habilitado', 'DISABLED', etc.)
 }
 
 public class ExportProgress
